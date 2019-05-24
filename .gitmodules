@@ -1,0 +1,9 @@
+[submodule "components/ninux_esp32_relay_https"]
+	path = components/ninux_esp32_relay_https
+	url = https://github.com/ninnux/ninux_esp32_relay_https.git
+[submodule "components/ninux_esp32_ota"]
+	path = components/ninux_esp32_ota
+	url = https://github.com/ninnux/ninux_esp32_ota
+[submodule "components/esp32_web_basic_auth"]
+	path = components/esp32_web_basic_auth
+	url = https://github.com/ninnux/esp32_web_basic_auth
