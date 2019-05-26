@@ -28,6 +28,7 @@ const int CONNECTED_BIT = BIT0;
 //#include "esp32_web_basic_auth.h"
 #include "ninux_esp32_relay_https.h"
 #include "ninux_esp32_ota.h"
+#include "ninux_esp32_mqtt.h"
 
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
@@ -99,4 +100,5 @@ void app_main()
     //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
+    ninux_mqtt_publish("controllo/lampadasanfelice/status","accesa");
 }

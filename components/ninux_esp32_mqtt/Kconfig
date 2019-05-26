@@ -1,0 +1,9 @@
+menu "Ninux MQTT Configuration"
+
+    config BROKER_URL
+        string "MQTT broker url"
+        default "mqtt://lora.ninux.org"
+        help
+            MQTT broker URL address
+  
+endmenu
