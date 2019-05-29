@@ -100,5 +100,7 @@ void app_main()
     //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
-    ninux_mqtt_publish("controllo/lampadasanfelice/status","accesa");
+    ninux_mqtt_init();
+    ninux_mqtt_subscribe_topic("controllo/sanfelice/lampada0");
+    //ninux_mqtt_publish("controllo/lampadasanfelice/status","accesa");
 }
