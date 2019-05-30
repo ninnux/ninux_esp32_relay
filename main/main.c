@@ -300,6 +300,5 @@ void app_main()
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
     ninux_mqtt_init(mqtt_event_handler);
-    ninux_mqtt_subscribe_topic("controllo/testufficio/lampada0");
-    //ninux_mqtt_publish("controllo/lampadasanfelice/status","accesa");
+    ninux_mqtt_subscribe_topic("controllo/testufficio/#");
 }
