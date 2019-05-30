@@ -50,8 +50,8 @@ void gpio_out(int ioport,int value){
 void do_action(char* portstr,char* action){
 	int port;
 	int i;
-    	char mqtt_topic[512];
-    	bzero(mqtt_topic,sizeof(mqtt_topic));
+    	//char mqtt_topic[512];
+    	//bzero(mqtt_topic,sizeof(mqtt_topic));
 	if(strcmp(portstr,"all")==0){
 		//for(i=MIN_PORT;i<MAX_PORT+1;i++){
 		//	do_action((char*)i,action);
@@ -129,6 +129,8 @@ if(!esp32_web_basic_auth(req)){
     char *campo;
     char portstr[8];
     int port;
+    char mqtt_topic[512];
+    bzero(mqtt_topic,sizeof(mqtt_topic));
     bzero(http_message,sizeof(http_message));
     memcpy(myuri,req->uri,sizeof(myuri));
     campo=strtok(myuri,"/");
@@ -142,6 +144,8 @@ if(!esp32_web_basic_auth(req)){
             campo=strtok(NULL,"/");
     	    printf("campo:%s\n",campo);
             if(strcmp(campo,"on")==0 || strcmp(campo,"off")==0 || strcmp(campo,"reset")==0){
+		sprintf(mqtt_topic,"controllo/feedback/testufficio/ports/%s",portstr);
+        	ninux_mqtt_publish(mqtt_topic,campo);
                 do_action(portstr,campo);
 		printf("do_action %d %s\n",port,campo);
                 httpd_resp_set_type(req, "text/html");
