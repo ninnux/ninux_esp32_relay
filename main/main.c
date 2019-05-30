@@ -99,7 +99,7 @@ void do_action(char* portstr,char* action){
 		}
 	}
 	}
-	sprintf(mqtt_topic,"controllo/testufficio/ports/%s",portstr);
+	sprintf(mqtt_topic,"controllo/feedback/testufficio/ports/%s",portstr);
         ninux_mqtt_publish(mqtt_topic,action);
 }
 
@@ -192,7 +192,12 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
     char mytopic[512];
     char *campo;
 	int port;
+    char node_name[32];
     char portstr[8];
+    char action[16];
+    bzero(action,sizeof(action));
+    bzero(node_name,sizeof(node_name));
+    bzero(portstr,sizeof(portstr));
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG2, "MQTT_EVENT_CONNECTED");
@@ -218,30 +223,41 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
             ESP_LOGI(TAG2, "MQTT_EVENT_DATA");
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
             printf("DATA=%.*s\r\n", event->data_len, event->data);
-            memcpy(mytopic,event->topic,event->topic_len);
-            campo=strtok(mytopic,"/");
-            printf("campo:%s\n",campo);
-            if(strcmp(campo,"ports")==0){
-                campo=strtok(NULL,"/");
-            	printf("campo:%s\n",campo);
-	            memcpy(portstr,campo,strlen(campo));
-                port=atoi(campo);
-                if((port <= MAX_PORT && port >= MIN_PORT )|| strcmp(campo,"all")==0){
-                    campo=strtok(NULL,"/");
-            	    printf("campo:%s\n",campo);
-                    if(strcmp(campo,"on")==0 || strcmp(campo,"off")==0 || strcmp(campo,"reset")==0){
-                        do_action(portstr,campo);
-	                	printf("do_action %d %s\n",port,campo);
-                    }else{
-                        printf("command error");
-                    }
+           
+	    scanf("controllo/%s/ports/%s",node_name,portstr); 
+            port=atoi(portstr);
+            if((port <= MAX_PORT && port >= MIN_PORT )|| strcmp(portstr,"all")==0){
+		do_action(portstr,event->data);
+	    }
+	    //memcpy(mytopic,event->topic,event->topic_len);
+            //campo=strtok(mytopic,"/");
+            //printf("campo:%s\n",campo);
+            //campo=strtok(NULL,"/");//nome del nodo
+            //printf("campo:%s\n",campo);
+            //campo=strtok(NULL,"/");//salta il nome del nodo
+            //if(strcmp(campo,"ports")==0){
+            //    campo=strtok(NULL,"/");
+            //	printf("porta:%s\n",campo);
+	    //    memcpy(portstr,campo,strlen(campo));
+            //    port=atoi(campo);
+            //    if((port <= MAX_PORT && port >= MIN_PORT )|| strcmp(campo,"all")==0){
+            //        //campo=strtok(NULL,"/");
+            //	    printf("action:%s\n",event->data);
+            //        if(strncmp(event->data,"on",event->data_len)==0 || strncmp(event->data,"off",event->data_len)==0 || strncmp(event->data,"reset",event->data_len)==0){
+	    //    	sprintf(action,"%s",event->data);
+            //            do_action(portstr,action);
+	    //           	printf("do_action %d %s\n",port,action);
+            //        }else{
+            //            printf("command error");
+            //        }
 
-                 }else{
-                        printf("port unrecognized");
-                 }
-             }else{
-                printf("invalid path");
-             }
+            //     }else{
+            //            printf("port unrecognized");
+            //     }
+            // }else{
+            //    printf("invalid path");
+            // }
+	    //printf("do_action fine\n");
             break;
         case MQTT_EVENT_ERROR:
             ESP_LOGI(TAG2, "MQTT_EVENT_ERROR");
