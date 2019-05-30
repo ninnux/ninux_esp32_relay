@@ -189,6 +189,10 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 {
     esp_mqtt_client_handle_t client = event->client;
     int msg_id;
+    char mytopic[512];
+    char *campo;
+	int port;
+    char portstr[8];
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG2, "MQTT_EVENT_CONNECTED");
@@ -214,6 +218,30 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
             ESP_LOGI(TAG2, "MQTT_EVENT_DATA");
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
             printf("DATA=%.*s\r\n", event->data_len, event->data);
+            memcpy(mytopic,event->topic,event->topic_len);
+            campo=strtok(mytopic,"/");
+            printf("campo:%s\n",campo);
+            if(strcmp(campo,"ports")==0){
+                campo=strtok(NULL,"/");
+            	printf("campo:%s\n",campo);
+	            memcpy(portstr,campo,strlen(campo));
+                port=atoi(campo);
+                if((port <= MAX_PORT && port >= MIN_PORT )|| strcmp(campo,"all")==0){
+                    campo=strtok(NULL,"/");
+            	    printf("campo:%s\n",campo);
+                    if(strcmp(campo,"on")==0 || strcmp(campo,"off")==0 || strcmp(campo,"reset")==0){
+                        do_action(portstr,campo);
+	                	printf("do_action %d %s\n",port,campo);
+                    }else{
+                        printf("command error");
+                    }
+
+                 }else{
+                        printf("port unrecognized");
+                 }
+             }else{
+                printf("invalid path");
+             }
             break;
         case MQTT_EVENT_ERROR:
             ESP_LOGI(TAG2, "MQTT_EVENT_ERROR");
