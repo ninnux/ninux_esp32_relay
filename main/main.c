@@ -99,7 +99,7 @@ void do_action(char* portstr,char* action){
 		}
 	}
 	}
-	sprintf(mqtt_topic,"controllo/lampadasanfelice/ports/%s",portstr);
+	sprintf(mqtt_topic,"controllo/testufficio/ports/%s",portstr);
         ninux_mqtt_publish(mqtt_topic,action);
 }
 
@@ -183,9 +183,6 @@ httpd_uri_t port_management = {
 };
 
 
-httpd_uri_t * handler_array[2];
-handler_array[0]= &update;
-handler_array[1]= &port_management;
 
 
 static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
@@ -286,12 +283,16 @@ void app_main()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK( err );
-
     tcpip_adapter_init();
-    
     initialise_wifi();
-    ninux_esp32_https(handler_array);
     esp_ota_mark_app_valid_cancel_rollback();
+
+
+    httpd_uri_t * handler_array[2];
+    handler_array[0]= &update;
+    handler_array[1]= &port_management;
+
+    ninux_esp32_https(handler_array);
     //esp_ota_mark_app_invalid_rollback_and_reboot();
     ninux_esp32_ota();
     //xTaskCreate(&ota_example_task, "ota_example", 8192, NULL, 5, NULL);
@@ -299,6 +300,6 @@ void app_main()
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
     ninux_mqtt_init(mqtt_event_handler);
-    ninux_mqtt_subscribe_topic("controllo/sanfelice/lampada0");
+    ninux_mqtt_subscribe_topic("controllo/testufficio/lampada0");
     //ninux_mqtt_publish("controllo/lampadasanfelice/status","accesa");
 }
