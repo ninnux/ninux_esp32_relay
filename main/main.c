@@ -22,6 +22,14 @@
 
 #include <esp_https_server.h>
 
+
+#include "driver/gpio.h"
+#define MAX_PORT 1
+#define MIN_PORT 0
+
+#define ZERO_PIN 23
+#define ONE_PIN 17 
+
 EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 
@@ -29,6 +37,196 @@ const int CONNECTED_BIT = BIT0;
 #include "ninux_esp32_relay_https.h"
 #include "ninux_esp32_ota.h"
 #include "ninux_esp32_mqtt.h"
+
+
+
+void gpio_out(int ioport,int value){
+    gpio_pad_select_gpio(ioport);
+    /* Set the GPIO as a push/pull output */
+    gpio_set_direction(ioport, GPIO_MODE_OUTPUT);
+    gpio_set_level(ioport, value);
+}
+
+void do_action(char* portstr,char* action){
+	int port;
+	int i;
+    	char mqtt_topic[512];
+    	bzero(mqtt_topic,sizeof(mqtt_topic));
+	if(strcmp(portstr,"all")==0){
+		//for(i=MIN_PORT;i<MAX_PORT+1;i++){
+		//	do_action((char*)i,action);
+		//}
+		if(strcmp(action,"on")==0){
+			gpio_out(ZERO_PIN,0);
+			gpio_out(ONE_PIN,0);
+		}
+		if(strcmp(action,"off")==0){
+			gpio_out(ZERO_PIN,1);
+			gpio_out(ONE_PIN,1);
+		}
+		if(strcmp(action,"reset")==0){
+			gpio_out(ZERO_PIN,1);
+			gpio_out(ONE_PIN,1);
+			vTaskDelay(10000 / portTICK_PERIOD_MS);
+			gpio_out(ZERO_PIN,0);
+			gpio_out(ONE_PIN,0);
+		}
+		
+	}else{
+        port=atoi(portstr);
+        if(port <= MAX_PORT && port >= MIN_PORT ){
+		if(port==0 && strcmp(action,"on")==0){
+			gpio_out(ZERO_PIN,0);
+		}
+		if(port==0 && strcmp(action,"off")==0){
+			gpio_out(ZERO_PIN,1);
+		}
+		if(port==0 && strcmp(action,"reset")==0){
+			gpio_out(ZERO_PIN,1);
+			vTaskDelay(10000 / portTICK_PERIOD_MS);
+			gpio_out(ZERO_PIN,0);
+		}
+		if(port==1 && strcmp(action,"on")==0){
+			gpio_out(ONE_PIN,0);
+		}
+		if(port==1 && strcmp(action,"off")==0){
+			gpio_out(ONE_PIN,1);
+		}
+		if(port==1 && strcmp(action,"reset")==0){
+			gpio_out(ONE_PIN,1);
+			vTaskDelay(10000 / portTICK_PERIOD_MS);
+			gpio_out(ONE_PIN,0);
+		}
+	}
+	}
+	sprintf(mqtt_topic,"controllo/lampadasanfelice/ports/%s",portstr);
+        ninux_mqtt_publish(mqtt_topic,action);
+}
+
+///* An HTTP GET handler */
+static esp_err_t update_get_handler(httpd_req_t *req)
+{
+if(!esp32_web_basic_auth(req)){
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_send(req, "<h1>Hello Secure World2!</h1>", -1); // -1 = use strlen()
+    ninux_esp32_ota();
+
+}
+else{
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_send(req, "<h1>Culo2!</h1>", -1); // -1 = use strlen()
+}
+    return ESP_OK;
+}
+
+static esp_err_t port_management_handler(httpd_req_t *req)
+{
+if(!esp32_web_basic_auth(req)){
+    char myuri[512];
+    char http_message[512];
+    char command[8];
+    char *campo;
+    char portstr[8];
+    int port;
+    bzero(http_message,sizeof(http_message));
+    memcpy(myuri,req->uri,sizeof(myuri));
+    campo=strtok(myuri,"/");
+    printf("campo:%s\n",campo);
+    if(strcmp(campo,"ports")==0){
+        campo=strtok(NULL,"/");
+    	printf("campo:%s\n",campo);
+	memcpy(portstr,campo,strlen(campo));
+        port=atoi(campo);
+        if((port <= MAX_PORT && port >= MIN_PORT )|| strcmp(campo,"all")==0){
+            campo=strtok(NULL,"/");
+    	    printf("campo:%s\n",campo);
+            if(strcmp(campo,"on")==0 || strcmp(campo,"off")==0 || strcmp(campo,"reset")==0){
+                do_action(portstr,campo);
+		printf("do_action %d %s\n",port,campo);
+                httpd_resp_set_type(req, "text/html");
+                sprintf(http_message,"<h1>%d %s</h1>",port,campo);
+                httpd_resp_send(req, http_message, -1);
+            }else{
+                httpd_resp_set_type(req, "text/html");
+                httpd_resp_send(req, "<h1>command error</h1>", -1); // -1 = use strlen()
+            }
+
+         }else{
+                httpd_resp_set_type(req, "text/html");
+                httpd_resp_send(req, "<h1>port unrecognized</h1>", -1); // -1 = use strlen()
+         }
+     }else{
+        httpd_resp_set_type(req, "text/html");
+        httpd_resp_send(req, "<h1>invalid path</h1>", -1); // -1 = use strlen()
+
+     }
+}
+else{
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_send(req, "<h1>Culo2!</h1>", -1); // -1 = use strlen()
+}
+
+    return ESP_OK;
+}
+
+
+httpd_uri_t update = {
+    .uri       = "/update",
+    .method    = HTTP_GET,
+    .handler   = update_get_handler
+};
+
+httpd_uri_t port_management = {
+    .uri       = "/ports/*",
+    .method    = HTTP_GET,
+    .handler   = port_management_handler
+};
+
+
+httpd_uri_t * handler_array[2];
+handler_array[0]= &update;
+handler_array[1]= &port_management;
+
+
+static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
+{
+    esp_mqtt_client_handle_t client = event->client;
+    int msg_id;
+    switch (event->event_id) {
+        case MQTT_EVENT_CONNECTED:
+            ESP_LOGI(TAG2, "MQTT_EVENT_CONNECTED");
+            xEventGroupSetBits(mqtt_event_group, CONNECTED_BIT);
+            msg_id = esp_mqtt_client_subscribe(client,input_mqtt_topic , 0);
+            break;
+        case MQTT_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG2, "MQTT_EVENT_DISCONNECTED");
+            break;
+
+        case MQTT_EVENT_SUBSCRIBED:
+            ESP_LOGI(TAG2, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+            //msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
+            //ESP_LOGI(TAG2, "sent publish successful, msg_id=%d", msg_id);
+            break;
+        case MQTT_EVENT_UNSUBSCRIBED:
+            ESP_LOGI(TAG2, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_PUBLISHED:
+            ESP_LOGI(TAG2, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_DATA:
+            ESP_LOGI(TAG2, "MQTT_EVENT_DATA");
+            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+            printf("DATA=%.*s\r\n", event->data_len, event->data);
+            break;
+        case MQTT_EVENT_ERROR:
+            ESP_LOGI(TAG2, "MQTT_EVENT_ERROR");
+            break;
+        default:
+            ESP_LOGI(TAG2, "Other event id:%d", event->event_id);
+            break;
+    }
+    return ESP_OK;
+}
 
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
@@ -92,7 +290,7 @@ void app_main()
     tcpip_adapter_init();
     
     initialise_wifi();
-    ninux_esp32_https();
+    ninux_esp32_https(handler_array);
     esp_ota_mark_app_valid_cancel_rollback();
     //esp_ota_mark_app_invalid_rollback_and_reboot();
     ninux_esp32_ota();
@@ -100,7 +298,7 @@ void app_main()
     //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
-    ninux_mqtt_init();
+    ninux_mqtt_init(mqtt_event_handler);
     ninux_mqtt_subscribe_topic("controllo/sanfelice/lampada0");
     //ninux_mqtt_publish("controllo/lampadasanfelice/status","accesa");
 }
