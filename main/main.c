@@ -99,9 +99,10 @@ void do_action(char* portstr,char* action){
 		}
 	}
 	}
-	//printf("controllo/feedback/testufficio/ports/%s",portstr);
-	//sprintf(mqtt_topic,"controllo/feedback/testufficio/ports/%s",portstr);
-        //ninux_mqtt_publish(mqtt_topic,action);
+	printf("do_action alla fine... manca il publish\n");
+	printf("controllo/feedback/prova/ports/%s",portstr);
+        //ninux_mqtt_simple_publish(mqtt_topic,action);
+	printf("do_action alla fine... dopo il publish\n");
 }
 
 ///* An HTTP GET handler */
@@ -144,7 +145,7 @@ if(!esp32_web_basic_auth(req)){
             campo=strtok(NULL,"/");
     	    printf("campo:%s\n",campo);
             if(strcmp(campo,"on")==0 || strcmp(campo,"off")==0 || strcmp(campo,"reset")==0){
-		sprintf(mqtt_topic,"controllo/feedback/testufficio/ports/%s",portstr);
+		sprintf(mqtt_topic,"controllo/feedback/prova/ports/%s",portstr);
         	ninux_mqtt_publish(mqtt_topic,campo);
                 do_action(portstr,campo);
 		printf("do_action %d %s\n",port,campo);
@@ -200,9 +201,11 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
     char node_name[32];
     char portstr[8];
     char action[16];
+    char mqtt_topic[512];
     bzero(action,sizeof(action));
     bzero(node_name,sizeof(node_name));
     bzero(portstr,sizeof(portstr));
+    bzero(mqtt_topic,sizeof(mqtt_topic));
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG2, "MQTT_EVENT_CONNECTED");
@@ -257,6 +260,8 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
                     if(strcmp(action,"on")==0 || strcmp(action,"off")==0 || strcmp(action,"reset")==0){
 	        	//sprintf(action,"%s",event->data);
                         do_action(portstr,action);
+			sprintf(mqtt_topic,"controllo/feedback/prova/ports/%s",portstr);
+			msg_id = esp_mqtt_client_publish(client,mqtt_topic, action, strlen(action), 0 , 0);
 	               	printf("do_action %d %s\n",port,action);
                     }else{
                         printf("command error");
@@ -355,5 +360,5 @@ void app_main()
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
     ninux_mqtt_init(mqtt_event_handler);
-    ninux_mqtt_subscribe_topic("controllo/testufficio/#");
+    ninux_mqtt_subscribe_topic("controllo/prova/#");
 }
