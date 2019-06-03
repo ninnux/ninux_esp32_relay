@@ -1,0 +1,14 @@
+menu "Ninux Relay MQTT topic"
+
+    config MQTT_TOPIC_PREFIX 
+        string "MQTT Topic prefix"
+        default "comando/nodename/"
+        help
+            MQTT topic prefix 
+    config MQTT_TOPIC_FEEDBACK_PREFIX 
+        string "MQTT Topic feedback prefix"
+        default "comando/feedback/nodename/"
+        help
+            MQTT topic feedback prefix 
+  
+endmenu

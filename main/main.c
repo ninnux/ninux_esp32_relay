@@ -100,8 +100,8 @@ void do_action(char* portstr,char* action){
 	}
 	}
 	printf("do_action alla fine... manca il publish\n");
-	printf("controllo/feedback/prova/ports/%s",portstr);
-	sprintf(mqtt_topic,"controllo/feedback/prova/ports/%s",portstr);
+	printf("%s/ports/%s",CONFIG_MQTT_TOPIC_FEEDBACK_PREFIX,portstr);
+	sprintf(mqtt_topic,"%s/ports/%s",CONFIG_MQTT_TOPIC_FEEDBACK_PREFIX,portstr);
         ninux_mqtt_publish(mqtt_topic,action);
 	printf("do_action alla fine... dopo il publish\n");
 }
@@ -327,6 +327,9 @@ static void initialise_wifi(void)
 void app_main()
 {
     static httpd_handle_t server = NULL;
+    char mqtt_control_topic[512];
+    bzero(mqtt_control_topic,sizeof(mqtt_control_topic));
+    sprintf(mqtt_control_topic,"%s/#",CONFIG_MQTT_TOPIC_PREFIX);
 
     //ESP_ERROR_CHECK(nvs_flash_init());
     // Initialize NVS.
@@ -356,6 +359,6 @@ void app_main()
     //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
-    ninux_mqtt_set_topic("controllo/prova/#");
+    ninux_mqtt_set_topic(mqtt_control_topic);
     ninux_mqtt_init(mqtt_event_handler);
 }
