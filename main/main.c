@@ -50,8 +50,8 @@ void gpio_out(int ioport,int value){
 void do_action(char* portstr,char* action){
 	int port;
 	int i;
-    	//char mqtt_topic[512];
-    	//bzero(mqtt_topic,sizeof(mqtt_topic));
+    	char mqtt_topic[512];
+    	bzero(mqtt_topic,sizeof(mqtt_topic));
 	if(strcmp(portstr,"all")==0){
 		//for(i=MIN_PORT;i<MAX_PORT+1;i++){
 		//	do_action((char*)i,action);
@@ -101,7 +101,8 @@ void do_action(char* portstr,char* action){
 	}
 	printf("do_action alla fine... manca il publish\n");
 	printf("controllo/feedback/prova/ports/%s",portstr);
-        //ninux_mqtt_simple_publish(mqtt_topic,action);
+	sprintf(mqtt_topic,"controllo/feedback/prova/ports/%s",portstr);
+        ninux_mqtt_publish(mqtt_topic,action);
 	printf("do_action alla fine... dopo il publish\n");
 }
 
@@ -130,8 +131,8 @@ if(!esp32_web_basic_auth(req)){
     char *campo;
     char portstr[8];
     int port;
-    char mqtt_topic[512];
-    bzero(mqtt_topic,sizeof(mqtt_topic));
+    //char mqtt_topic[512];
+    //bzero(mqtt_topic,sizeof(mqtt_topic));
     bzero(http_message,sizeof(http_message));
     memcpy(myuri,req->uri,sizeof(myuri));
     campo=strtok(myuri,"/");
@@ -145,8 +146,6 @@ if(!esp32_web_basic_auth(req)){
             campo=strtok(NULL,"/");
     	    printf("campo:%s\n",campo);
             if(strcmp(campo,"on")==0 || strcmp(campo,"off")==0 || strcmp(campo,"reset")==0){
-		sprintf(mqtt_topic,"controllo/feedback/prova/ports/%s",portstr);
-        	ninux_mqtt_publish(mqtt_topic,campo);
                 do_action(portstr,campo);
 		printf("do_action %d %s\n",port,campo);
                 httpd_resp_set_type(req, "text/html");
@@ -201,11 +200,11 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
     char node_name[32];
     char portstr[8];
     char action[16];
-    char mqtt_topic[512];
+    //char mqtt_topic[512];
     bzero(action,sizeof(action));
     bzero(node_name,sizeof(node_name));
     bzero(portstr,sizeof(portstr));
-    bzero(mqtt_topic,sizeof(mqtt_topic));
+    //bzero(mqtt_topic,sizeof(mqtt_topic));
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG2, "MQTT_EVENT_CONNECTED");
@@ -260,8 +259,6 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
                     if(strcmp(action,"on")==0 || strcmp(action,"off")==0 || strcmp(action,"reset")==0){
 	        	//sprintf(action,"%s",event->data);
                         do_action(portstr,action);
-			sprintf(mqtt_topic,"controllo/feedback/prova/ports/%s",portstr);
-			msg_id = esp_mqtt_client_publish(client,mqtt_topic, action, strlen(action), 0 , 0);
 	               	printf("do_action %d %s\n",port,action);
                     }else{
                         printf("command error");
@@ -359,6 +356,6 @@ void app_main()
     //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
+    ninux_mqtt_set_topic("controllo/prova/#");
     ninux_mqtt_init(mqtt_event_handler);
-    ninux_mqtt_subscribe_topic("controllo/prova/#");
 }
