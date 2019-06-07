@@ -18,7 +18,7 @@
 #include <sys/param.h>
 #include "tcpip_adapter.h"
 #include "esp_eth.h"
-#include "protocol_examples_common.h"
+//#include "protocol_examples_common.h"
 
 #include <esp_https_server.h>
 
@@ -57,51 +57,51 @@ void do_action(char* portstr,char* action){
 		//	do_action((char*)i,action);
 		//}
 		if(strcmp(action,"on")==0){
-			gpio_out(ZERO_PIN,0);
-			gpio_out(ONE_PIN,0);
+			gpio_out(ZERO_PIN,1);
+			gpio_out(ONE_PIN,1);
 		}
 		if(strcmp(action,"off")==0){
-			gpio_out(ZERO_PIN,1);
-			gpio_out(ONE_PIN,1);
-		}
-		if(strcmp(action,"reset")==0){
-			gpio_out(ZERO_PIN,1);
-			gpio_out(ONE_PIN,1);
-			vTaskDelay(10000 / portTICK_PERIOD_MS);
 			gpio_out(ZERO_PIN,0);
 			gpio_out(ONE_PIN,0);
+		}
+		if(strcmp(action,"reset")==0){
+			gpio_out(ZERO_PIN,0);
+			gpio_out(ONE_PIN,0);
+			vTaskDelay(10000 / portTICK_PERIOD_MS);
+			gpio_out(ZERO_PIN,1);
+			gpio_out(ONE_PIN,1);
 		}
 		
 	}else{
         port=atoi(portstr);
         if(port <= MAX_PORT && port >= MIN_PORT ){
 		if(port==0 && strcmp(action,"on")==0){
-			gpio_out(ZERO_PIN,0);
+			gpio_out(ZERO_PIN,1);
 		}
 		if(port==0 && strcmp(action,"off")==0){
-			gpio_out(ZERO_PIN,1);
-		}
-		if(port==0 && strcmp(action,"reset")==0){
-			gpio_out(ZERO_PIN,1);
-			vTaskDelay(10000 / portTICK_PERIOD_MS);
 			gpio_out(ZERO_PIN,0);
 		}
+		if(port==0 && strcmp(action,"reset")==0){
+			gpio_out(ZERO_PIN,0);
+			vTaskDelay(10000 / portTICK_PERIOD_MS);
+			gpio_out(ZERO_PIN,1);
+		}
 		if(port==1 && strcmp(action,"on")==0){
-			gpio_out(ONE_PIN,0);
+			gpio_out(ONE_PIN,1);
 		}
 		if(port==1 && strcmp(action,"off")==0){
-			gpio_out(ONE_PIN,1);
+			gpio_out(ONE_PIN,0);
 		}
 		if(port==1 && strcmp(action,"reset")==0){
-			gpio_out(ONE_PIN,1);
-			vTaskDelay(10000 / portTICK_PERIOD_MS);
 			gpio_out(ONE_PIN,0);
+			vTaskDelay(10000 / portTICK_PERIOD_MS);
+			gpio_out(ONE_PIN,1);
 		}
 	}
 	}
 	printf("do_action alla fine... manca il publish\n");
-	printf("controllo/feedback/prova/ports/%s",portstr);
-	sprintf(mqtt_topic,"controllo/feedback/prova/ports/%s",portstr);
+	printf("controllo/feedback/ciabbatta0/ports/%s",portstr);
+	sprintf(mqtt_topic,"controllo/feedback/ciabbatta0/ports/%s",portstr);
         ninux_mqtt_publish(mqtt_topic,action);
 	printf("do_action alla fine... dopo il publish\n");
 }
@@ -356,6 +356,6 @@ void app_main()
     //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
     //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
     //esp_restart();
-    ninux_mqtt_set_topic("controllo/prova/#");
+    ninux_mqtt_set_topic("controllo/ciabbatta0/#");
     ninux_mqtt_init(mqtt_event_handler);
 }
