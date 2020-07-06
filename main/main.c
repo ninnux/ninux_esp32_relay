@@ -27,8 +27,10 @@
 #define MAX_PORT 1
 #define MIN_PORT 0
 
-#define ZERO_PIN 23
-#define ONE_PIN 17 
+//#define ZERO_PIN 23
+//#define ONE_PIN 17 
+#define ZERO_PIN 16
+#define ONE_PIN 17
 
 EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
@@ -288,15 +290,27 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     switch (event->event_id) {
     case SYSTEM_EVENT_STA_START:
         esp_wifi_connect();
+        ESP_LOGI(TAG, "SYSTEM_EVENT_STA_START");
+        break;
+    case SYSTEM_EVENT_STA_CONNECTED:
+        /* enable ipv6 */
+        tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
         break;
     case SYSTEM_EVENT_STA_GOT_IP:
         xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP");
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
-        // This is a workaround as ESP32 WiFi libs don't currently auto-reassociate. 
+        /* This is a workaround as ESP32 WiFi libs don't currently auto-reassociate. */
         esp_wifi_connect();
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
         break;
+    case SYSTEM_EVENT_AP_STA_GOT_IP6:
+        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP6");
+
+        char *ip6 = ip6addr_ntoa(&event->event_info.got_ip6.ip6_info.ip);
+        ESP_LOGI(TAG, "IPv6: %s", ip6);
     default:
         break;
     }
