@@ -20,6 +20,8 @@
 #include "esp_eth.h"
 //#include "protocol_examples_common.h"
 
+#include "app_prov.h"
+
 #include <esp_https_server.h>
 
 
@@ -311,6 +313,22 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 
         char *ip6 = ip6addr_ntoa(&event->event_info.got_ip6.ip6_info.ip);
         ESP_LOGI(TAG, "IPv6: %s", ip6);
+    case SYSTEM_EVENT_AP_START:
+        ESP_LOGI(TAG, "SoftAP started");
+        break;
+    case SYSTEM_EVENT_AP_STOP:
+        ESP_LOGI(TAG, "SoftAP stopped");
+        break;
+    case SYSTEM_EVENT_AP_STACONNECTED:
+        ESP_LOGI(TAG, "station:"MACSTR" join, AID=%d",
+                 MAC2STR(event->event_info.sta_connected.mac),
+                 event->event_info.sta_connected.aid);
+        break;
+    case SYSTEM_EVENT_AP_STADISCONNECTED:
+        ESP_LOGI(TAG, "station:"MACSTR"leave, AID=%d",
+                 MAC2STR(event->event_info.sta_disconnected.mac),
+                 event->event_info.sta_disconnected.aid);
+        break;
     default:
         break;
     }
@@ -337,6 +355,17 @@ static void initialise_wifi(void)
     ESP_ERROR_CHECK( esp_wifi_start() );
 }
 
+static void wifi_init_sta()
+{
+    tcpip_adapter_init();
+    wifi_event_group = xEventGroupCreate();
+    /* Start wifi in station mode with credentials set during provisioning */
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
+    ESP_ERROR_CHECK(esp_wifi_start() );
+}
+
 
 void app_main()
 {
@@ -354,22 +383,82 @@ void app_main()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK( err );
+    //tcpip_adapter_init();
+    //initialise_wifi();
+    
+    /* Security version */
+    int security = 0;
+    /* Proof of possession */
+    const protocomm_security_pop_t *pop = NULL;
+
+#ifdef CONFIG_USE_SEC_1
+    security = 1;
+#endif
+
+    /* Having proof of possession is optional */
+#ifdef CONFIG_USE_POP
+    const static protocomm_security_pop_t app_pop = {
+        .data = (uint8_t *) CONFIG_POP,
+        .len = (sizeof(CONFIG_POP)-1)
+    };
+    pop = &app_pop;
+#endif
+
+    /* Initialize networking stack */
     tcpip_adapter_init();
-    initialise_wifi();
-    esp_ota_mark_app_valid_cancel_rollback();
+
+    /* Set our event handling */
+    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+
+    /* Check if device is provisioned */
+    bool provisioned;
+    if (app_prov_is_provisioned(&provisioned) != ESP_OK) {
+        ESP_LOGE(TAG, "Error getting device provisioning state");
+        return;
+    }
+
+    if (provisioned == false) {
+        /* If not provisioned, start provisioning via soft AP */
+        ESP_LOGI(TAG, "Starting WiFi SoftAP provisioning");
+
+        const char *ssid = NULL;
+
+#ifdef CONFIG_SOFTAP_SSID
+        ssid = CONFIG_SOFTAP_SSID;
+#else
+        uint8_t eth_mac[6];
+        esp_wifi_get_mac(WIFI_IF_STA, eth_mac);
+
+        char ssid_with_mac[33];
+        snprintf(ssid_with_mac, sizeof(ssid_with_mac), "PROV_%02X%02X%02X",
+                 eth_mac[3], eth_mac[4], eth_mac[5]);
+
+        ssid = ssid_with_mac;
+#endif
+
+        app_prov_start_softap_provisioning(ssid, CONFIG_SOFTAP_PASS,
+                                           security, pop);
+    } else {
+        /* Start WiFi station with credentials set during provisioning */
+        ESP_LOGI(TAG, "Starting WiFi station");
+        wifi_init_sta(NULL);
+
+//////////
+        esp_ota_mark_app_valid_cancel_rollback();
 
 
-    httpd_uri_t * handler_array[2];
-    handler_array[0]= &update;
-    handler_array[1]= &port_management;
+        httpd_uri_t * handler_array[2];
+        handler_array[0]= &update;
+        handler_array[1]= &port_management;
 
-    ninux_esp32_https(handler_array);
-    //esp_ota_mark_app_invalid_rollback_and_reboot();
-    ninux_esp32_ota();
-    //xTaskCreate(&ota_example_task, "ota_example", 8192, NULL, 5, NULL);
-    //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
-    //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
-    //esp_restart();
-    ninux_mqtt_set_topic("controllo/ciabbatta0/#");
-    ninux_mqtt_init(mqtt_event_handler);
+        ninux_esp32_https(handler_array);
+        //esp_ota_mark_app_invalid_rollback_and_reboot();
+        ninux_esp32_ota();
+        //xTaskCreate(&ota_example_task, "ota_example", 8192, NULL, 5, NULL);
+        //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
+        //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
+        //esp_restart();
+        ninux_mqtt_set_topic("controllo/ciabbatta0/#");
+        ninux_mqtt_init(mqtt_event_handler);
+    }
 }
