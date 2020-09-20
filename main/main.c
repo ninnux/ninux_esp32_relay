@@ -104,8 +104,8 @@ void do_action(char* portstr,char* action){
 	}
 	}
 	printf("do_action alla fine... manca il publish\n");
-	printf("controllo/feedback/ciabbatta0/ports/%s",portstr);
-	sprintf(mqtt_topic,"controllo/feedback/ciabbatta0/ports/%s",portstr);
+	printf("controllo/feedback/%s/ports/%s",CONFIG_MQTT_NAME,portstr);
+	sprintf(mqtt_topic,"controllo/feedback/%s/ports/%s",CONFIG_MQTT_NAME,portstr);
         ninux_mqtt_publish(mqtt_topic,action);
 	printf("do_action alla fine... dopo il publish\n");
 }
@@ -469,7 +469,11 @@ void app_main()
         //xTaskCreate(&simple_ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
         //ESP_LOGE(TAG, "SIMULAZIONE DI LOOP");
         //esp_restart();
-        ninux_mqtt_set_topic("controllo/ciabbatta0/#");
+	
+    	char mqtt_set_topic[512];
+    	bzero(mqtt_set_topic,sizeof(mqtt_set_topic));
+	sprintf(mqtt_set_topic,"controllo/%s/#",CONFIG_MQTT_NAME);
+        ninux_mqtt_set_topic(mqtt_set_topic);
         ninux_mqtt_init(mqtt_event_handler);
     }
 }
