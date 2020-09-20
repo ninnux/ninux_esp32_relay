@@ -289,6 +289,10 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
+    /* Invoke Provisioning event handler first */
+    app_prov_event_handler(ctx, event);
+
+
     switch (event->event_id) {
     case SYSTEM_EVENT_STA_START:
         esp_wifi_connect();
@@ -371,7 +375,7 @@ void app_main()
 {
     static httpd_handle_t server = NULL;
 
-    //ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(nvs_flash_init());
     // Initialize NVS.
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -450,8 +454,15 @@ void app_main()
         httpd_uri_t * handler_array[2];
         handler_array[0]= &update;
         handler_array[1]= &port_management;
-
-        ninux_esp32_https(handler_array);
+        
+        handlers_struct_t* h=NULL;
+	h=malloc(sizeof(httpd_uri_t));
+        h->handlers=handler_array;
+        h->elements=2;
+	printf("ESP32 SDK version:%s, RAM left %d\n", system_get_sdk_version(), system_get_free_heap_size());
+        //ninux_esp32_https(handler_array);
+        ninux_esp32_https(h);
+	printf("ESP32 SDK version:%s, RAM left %d\n", system_get_sdk_version(), system_get_free_heap_size());
         //esp_ota_mark_app_invalid_rollback_and_reboot();
         ninux_esp32_ota();
         //xTaskCreate(&ota_example_task, "ota_example", 8192, NULL, 5, NULL);
